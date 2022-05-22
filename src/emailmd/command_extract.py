@@ -328,7 +328,8 @@ def extract_eml(msg: str) -> StandardEmail:
         attachments=attachments,
     )
 
-def construct_non_duplicate_folder(root:Path, target:str) -> Path:
+
+def construct_non_duplicate_folder(root: Path, target: str) -> Path:
 
     folder = root / Path(target)
 
@@ -336,20 +337,21 @@ def construct_non_duplicate_folder(root:Path, target:str) -> Path:
 
         try:
 
-            folder.mkdir(parents=True, exist_ok=False) # throw an exception of the folder exists
+            folder.mkdir(
+                parents=True, exist_ok=False
+            )  # throw an exception of the folder exists
 
         except FileExistsError as fe:
 
-            console.print((f'[red]The folder {folder} exists![/red]'))
+            console.print((f"[red]The folder {folder} exists![/red]"))
 
-            folder = root / Path(f'{target} ({i})')
+            folder = root / Path(f"{target} ({i})")
 
         else:
             break
 
     else:
-        raise FileExistsError(f'The folder {folder} exists!')
-
+        raise FileExistsError(f"The folder {folder} exists!")
 
     return folder
 
@@ -366,7 +368,6 @@ def write_standard_email(email_message: StandardEmail, output: Path) -> None:
 
     message_folder = construct_non_duplicate_folder(output, message_name.lower())
 
-
     # construct the name of the email message
     message_file = message_folder / Path(f"{message_name.lower()}.md")
     message_file.write_text(email_message.to_markdown(attachment_folder="attachments"))
@@ -381,7 +382,9 @@ def write_standard_email(email_message: StandardEmail, output: Path) -> None:
         attachment_file = attachment_folder / attachment.filename
         attachment_file.write_bytes(attachment.data)
 
-        console.print(f"[yellow]Saved Attachment[/yellow]: [cyan]{attachment_file.name}[/cyan]")
+        console.print(
+            f"[yellow]Saved Attachment[/yellow]: [cyan]{attachment_file.name}[/cyan]"
+        )
 
 
 @click.command()
