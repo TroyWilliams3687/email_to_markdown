@@ -302,25 +302,22 @@ def extract_eml_attachments(msg: EmailMessage) -> Optional[list[EmailAttachment]
 
 def extract_eml(msg: str) -> StandardEmail:
     """
-    Given the msg, read the contents, construct a markdown file
-    and write the markdown and attachments to the output path
+    Transform the string to a StandardEmail message.
 
     # Args
 
     msg
         - The path to the EML file to process
 
-    output
-        - The root folder to write the Markdown and attachments too
-
     # Return
 
-    None
+    StandardEmail
 
     """
 
     # https://docs.python.org/3/library/email.policy.html <- a policy needs to be defined
     email_message = message_from_string(msg, policy=policy.SMTP)
+
     header = extract_eml_header(email_message)
     body = extract_eml_body(email_message)
     attachments = extract_eml_attachments(email_message)
@@ -330,6 +327,31 @@ def extract_eml(msg: str) -> StandardEmail:
         body=body,
         attachments=attachments,
     )
+
+def construct_non_duplicate_folder(root:Path, target:str) -> Path:
+
+    folder = root / Path(target)
+
+    for i in range(25):
+
+        try:
+
+            folder.mkdir(parents=True, exist_ok=False) # throw an exception of the folder exists
+
+        except FileExistsError as fe:
+
+            console.print((f'[red]The folder {folder} exists![/red]'))
+
+            folder = root / Path(f'{target} ({i})')
+
+        else:
+            break
+
+    else:
+        raise FileExistsError(f'The folder {folder} exists!')
+
+
+    return folder
 
 
 def write_standard_email(email_message: StandardEmail, output: Path) -> None:
@@ -341,8 +363,9 @@ def write_standard_email(email_message: StandardEmail, output: Path) -> None:
     message_name = sanitize_filename(email_message.header.subject)
 
     # Construct the output folder - from the subject
-    message_folder = output / Path(message_name.lower())
-    message_folder.mkdir(parents=True, exist_ok=True)
+
+    message_folder = construct_non_duplicate_folder(output, message_name.lower())
+
 
     # construct the name of the email message
     message_file = message_folder / Path(f"{message_name.lower()}.md")
