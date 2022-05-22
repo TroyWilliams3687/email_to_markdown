@@ -106,21 +106,21 @@ from pathvalidate import sanitize_filename
 
 @dataclass
 class EmailHeader:
-    """
-    """
+    """ """
 
-    date:str = None
-    subject:str = None
-    email_to:str = None
-    email_from:str = None
-    others:dict[str,str] = None
+    date: str = None
+    subject: str = None
+    email_to: str = None
+    email_from: str = None
+    others: dict[str, str] = None
+
 
 @dataclass
 class EmailAttachment:
-    """
-    """
+    """ """
+
     filename: str = None
-    data:bytes = None
+    data: bytes = None
 
 
 @dataclass
@@ -132,7 +132,7 @@ class StandardEmail:
 
     header: EmailHeader = None
     body: str = None
-    attachments:list[EmailAttachment] = None
+    attachments: list[EmailAttachment] = None
 
     def to_markdown(self, **kwargs):
         """
@@ -147,31 +147,41 @@ class StandardEmail:
 
         """
 
-        attachment_folder = kwargs['attachment_folder'] if 'attachment_folder' in kwargs else ''
+        attachment_folder = (
+            kwargs["attachment_folder"] if "attachment_folder" in kwargs else ""
+        )
 
         # Construct the markdown body including some of the email header information
-        text = "\n".join([
-                f'Date: {self.header.date}',
-                f'Subject: {self.header.subject}',
-                f'To: {self.header.email_to}',
-                f'From: {self.header.email_from}',
-            ])
+        text = "\n".join(
+            [
+                f"Date: {self.header.date}",
+                f"Subject: {self.header.subject}",
+                f"To: {self.header.email_to}",
+                f"From: {self.header.email_from}",
+            ]
+        )
 
-        if 'full_header' in kwargs and kwargs['full_header']:
-            text += "\n".join(
+        if "full_header" in kwargs and kwargs["full_header"]:
+            text += (
+                "\n".join(
                     [f"{k.strip()}: {v.strip()}" for k, v in self.header.others.items()]
-                ) if self.header.others else ''
-
-        text += "\n".join(
-                ["", "----", "\n"]
+                )
+                if self.header.others
+                else ""
             )
+
+        text += "\n".join(["", "----", "\n"])
 
         text += self.body
 
         text += "\n".join(["", "---", "", "Attachments:", "", ""])
 
-        text += "\n".join([f"- {attachment_folder}/{a.filename}" if attachment_folder else f"- {a}"  for a in self.attachments])
-
+        text += "\n".join(
+            [
+                f"- {attachment_folder}/{a.filename}" if attachment_folder else f"- {a}"
+                for a in self.attachments
+            ]
+        )
 
         return text
 
@@ -202,8 +212,7 @@ def sanitize(dirty_html):
 
 
 def extract_eml_header(msg: EmailMessage) -> EmailHeader:
-    """
-    """
+    """ """
 
     # # all keys
     # for k,v in msg.items():
@@ -220,16 +229,16 @@ def extract_eml_header(msg: EmailMessage) -> EmailHeader:
     [f"{hk}: {msg[hk].strip()}" for hk in header_keys if hk in msg]
 
     return EmailHeader(
-        date=msg['Date'],
-        subject=msg['Subject'],
-        email_to=msg['To'],
-        email_from=msg['From'],
-        others= {k:v for k, v in msg.items() if k not in header_keys},
+        date=msg["Date"],
+        subject=msg["Subject"],
+        email_to=msg["To"],
+        email_from=msg["From"],
+        others={k: v for k, v in msg.items() if k not in header_keys},
     )
 
+
 def extract_eml_body(msg: EmailMessage) -> str:
-    """
-    """
+    """ """
 
     # get the email body, preferring the first, then the second
     # body = msg.get_body(('html', 'plain'))
@@ -258,9 +267,9 @@ def extract_eml_body(msg: EmailMessage) -> str:
 
     return body_content
 
+
 def extract_eml_attachments(msg: EmailMessage) -> Optional[list[EmailAttachment]]:
-    """
-    """
+    """ """
 
     attachments = []
 
@@ -276,13 +285,17 @@ def extract_eml_attachments(msg: EmailMessage) -> Optional[list[EmailAttachment]
                 fn = Path(f"attachment_{i}{ext}")
 
             else:
-                console.print(f"[red]{part.get_content_type()} - Could not guess based on mimetype! Attachment not written.[/red]")
+                console.print(
+                    f"[red]{part.get_content_type()} - Could not guess based on mimetype! Attachment not written.[/red]"
+                )
                 continue
 
-        attachments.append(EmailAttachment(
-            filename=fn,
-            data=part.get_payload(decode=True),
-        ))
+        attachments.append(
+            EmailAttachment(
+                filename=fn,
+                data=part.get_payload(decode=True),
+            )
+        )
 
     return attachments
 
@@ -319,7 +332,7 @@ def extract_eml(msg: str) -> StandardEmail:
     )
 
 
-def write_standard_email(email_message:StandardEmail, output: Path) -> None:
+def write_standard_email(email_message: StandardEmail, output: Path) -> None:
     """
     Given the StandardEmail, write it to the output folder, creating a
     new folder for the email and attachments.
@@ -333,22 +346,19 @@ def write_standard_email(email_message:StandardEmail, output: Path) -> None:
 
     # construct the name of the email message
     message_file = message_folder / Path(f"{message_name.lower()}.md")
-    message_file.write_text(email_message.to_markdown(attachment_folder='attachments'))
+    message_file.write_text(email_message.to_markdown(attachment_folder="attachments"))
 
     console.print(f"Saved Email: [cyan]{message_file.name}[/cyan]")
 
     for attachment in email_message.attachments:
 
-        attachment_folder = message_folder / Path('attachments')
+        attachment_folder = message_folder / Path("attachments")
         attachment_folder.mkdir(parents=True, exist_ok=True)
 
         attachment_file = attachment_folder / attachment.filename
         attachment_file.write_bytes(attachment.data)
 
         console.print(f"Saved Attachment: [cyan]{attachment_file.name}[/cyan]")
-
-
-
 
 
 @click.command()
