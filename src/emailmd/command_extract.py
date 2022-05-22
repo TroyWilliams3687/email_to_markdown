@@ -358,7 +358,7 @@ def write_standard_email(email_message: StandardEmail, output: Path) -> None:
         attachment_file = attachment_folder / attachment.filename
         attachment_file.write_bytes(attachment.data)
 
-        console.print(f"Saved Attachment: [cyan]{attachment_file.name}[/cyan]")
+        console.print(f"[yellow]Saved Attachment[/yellow]: [cyan]{attachment_file.name}[/cyan]")
 
 
 @click.command()
