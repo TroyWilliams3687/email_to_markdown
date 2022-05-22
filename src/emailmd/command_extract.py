@@ -20,17 +20,20 @@
 from pathlib import Path
 from email import message_from_string  # processing EML
 from email import policy
+import mimetypes
 
 # ------------
 # 3rd Party - From pip
 
 import click
 
-
 from rich.console import Console
+
 console = Console()
 
-from markdownify import markdownify # https://github.com/matthewwithanm/python-markdownify
+from markdownify import (
+    markdownify,
+)  # https://github.com/matthewwithanm/python-markdownify
 
 from lxml.html.clean import Cleaner
 from pathvalidate import sanitize_filename
@@ -113,12 +116,13 @@ def sanitize(dirty_html):
         remove_unknown_tags=True,
         # safe_attrs_only=True,
         # safe_attrs=frozenset(['src','color', 'href', 'title', 'class', 'name', 'id']),
-        remove_tags=('span', 'font', 'div'),
+        remove_tags=("span", "font", "div"),
     )
 
     return cleaner.clean_html(dirty_html)
 
-def process_eml(email_path:Path, output:Path) -> None:
+
+def process_eml(email_path: Path, output: Path) -> None:
     """
     Given the email_path, read the contents, construct a markdown file
     and write the markdown and attachments to the output path
@@ -146,19 +150,19 @@ def process_eml(email_path:Path, output:Path) -> None:
 
     # Selected header keys
     header_keys = [
-        'Date',
-        'Subject',
-        'To',
-        'From',
-        'Message-ID',
-        'In-Reply-To',
-        'Thread-Index',
-        'Thread-Topic',
+        "Date",
+        "Subject",
+        "To",
+        "From",
+        "Message-ID",
+        "In-Reply-To",
+        "Thread-Index",
+        "Thread-Topic",
     ]
 
     # get the email body, preferring the first, then the second
     # body = msg.get_body(('html', 'plain'))
-    body = msg.get_body(('plain', 'html'))
+    body = msg.get_body(("plain", "html"))
 
     # console.print(f'Body Type: {body.get_content_type()}')
     # text/html
@@ -174,7 +178,7 @@ def process_eml(email_path:Path, output:Path) -> None:
         # convert to Markdown
         body_md = markdownify(
             good_html,
-            heading_style='ATX',
+            heading_style="ATX",
             escape_asterisks=False,
             escape_underscores=False,
         )
@@ -182,11 +186,17 @@ def process_eml(email_path:Path, output:Path) -> None:
         body_content = body_md.strip()
 
     # Construct the markdown body including some of the email header information
-    md = '\n'.join([f'{hk}: {msg[hk].strip()}' for hk in header_keys if hk in msg] + ['','----','\n'] ) + body_content
+    md = (
+        "\n".join(
+            [f"{hk}: {msg[hk].strip()}" for hk in header_keys if hk in msg]
+            + ["", "----", "\n"]
+        )
+        + body_content
+    )
 
     # Construct the output folder
 
-    message_name = sanitize_filename(msg['Subject'])
+    message_name = sanitize_filename(msg["Subject"])
 
     message_folder = output / Path(message_name.lower())
     message_folder.mkdir(parents=True, exist_ok=True)
@@ -194,36 +204,56 @@ def process_eml(email_path:Path, output:Path) -> None:
     # -----------
     # Write Attachments
 
-    console.print(f'Attachments: {len(msg.get_payload())}')
+    console.print(f"Attachments: {len(msg.get_payload())}")
 
     attachments = []
 
     for i, attachment in enumerate(msg.get_payload()):
-        if attachment.get_content_maintype() == 'multipart':
+        if attachment.get_content_maintype() == "multipart":
             continue
 
+        attachment_folder = message_folder / Path('attachments')
+        attachment_folder.mkdir(parents=True, exist_ok=True)
+
         if attachment.get_filename():
-            fn = Path(f'{sanitize_filename(attachment.get_filename())}')
+            fn = Path(f"{sanitize_filename(attachment.get_filename())}")
 
-            attachments.append(fn.name)
-
-            attachment_name = message_folder / fn.name
+            attachment_name = attachment_folder / fn.name
             attachment_name.write_bytes(attachment.get_payload(decode=True))
 
+            attachments.append(attachment_name.relative_to(message_folder))
+
         else:
-            console.print('[red]Unable to determine attachment name![/red]')
+
+            console.print(f"[cyan]{attachment.get_content_type()} - Attachment name not identified![/cyan]")
+
+            ext = mimetypes.guess_extension(attachment.get_content_type())
+
+            if ext:
+                fn = Path(f"attachment_{i}{ext}")
+
+                attachments.append(fn.name)
+
+                attachment_name = attachment_folder / fn.name
+                attachment_name.write_bytes(attachment.get_payload(decode=True))
+
+            else:
+                console.print(f"[red]Could not guess based on mimetype! Attachment not written.[/red]")
 
 
     # ----------
     # Write the email to file based on the subject name
 
-    md = md + '\n'.join(['','---', '', 'Attachments:', '', '']) + '\n'.join([f'- {a}' for a in attachments])
+    md = (
+        md
+        + "\n".join(["", "---", "", "Attachments:", "", ""])
+        + "\n".join([f"- {a}" for a in attachments])
+    )
 
-    message_file = message_folder / Path(f'{message_name.lower()}.md')
+    message_file = message_folder / Path(f"{message_name.lower()}.md")
     message_file.write_text(md)
 
-
-
+    console.print(f"Email stored: {message_folder.name}")
 
 
 @click.command()
@@ -272,7 +302,7 @@ def extract(*args, **kwargs):
         ctx.abort()
 
     # console.print(f"Output: {kwargs['output']}...")
-    kwargs['output'].mkdir(parents=True, exist_ok=True)
+    kwargs["output"].mkdir(parents=True, exist_ok=True)
 
     for f in kwargs["files"]:
         console.print(f"Extracting: {f.name}...")
@@ -281,9 +311,9 @@ def extract(*args, **kwargs):
             pass
 
         elif f.suffix.lower() == ".eml":
-            process_eml(f, kwargs['output'])
+            process_eml(f, kwargs["output"])
 
         else:
-            console.print(f'[red]Unknown format -> {f.name}[/red]')
+            console.print(f"[red]Unknown format -> {f.name}[/red]")
 
-        console.print('---------')
+        console.print("---------")

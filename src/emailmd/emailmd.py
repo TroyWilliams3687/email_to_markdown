@@ -24,9 +24,11 @@ import click
 
 
 from rich.console import Console
+
 console = Console()
 
 from rich.traceback import install
+
 install(show_locals=False, suppress=[click])
 
 # ------------
@@ -35,6 +37,7 @@ install(show_locals=False, suppress=[click])
 from .command_extract import extract
 
 # -------------
+
 
 @click.group()
 @click.version_option()
@@ -53,4 +56,3 @@ def main(*args, **kwargs):
 
 # Add the child menu options
 main.add_command(extract)
-
