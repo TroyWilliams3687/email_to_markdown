@@ -381,7 +381,7 @@ def construct_non_duplicate_folder(
     return folder
 
 
-def construct_non_duplicate_file(filename: Path, retry_count: int = 25) -> Path:
+def construct_non_duplicate_file(filename: Path, retry_count: int = 100) -> Path:
     """
     Given a file name, check if it exists and create a new incremental
     name if it does, checking each one in turn. If there are no issues,
@@ -562,7 +562,7 @@ def extract(*args, **kwargs):
             write_standard_email(
                 msg,
                 kwargs["output"],
-                relative_path=f.relative_to(kwargs["files"]),
+                relative_path=f.parent.relative_to(kwargs["files"]),
             )
 
         else:
