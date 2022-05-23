@@ -17,6 +17,10 @@ $ emailmd extract ~/tmp/"email to markdown"/eml/* ~/tmp/"email to markdown"/msg/
 
 $ emailmd extract ~/tmp/"email to markdown"/eml/* ~/tmp/"email to markdown"/msg/* ~/tmp/"email to markdown"/output
 
+$ emailmd extract -r ~/tmp/'email to markdown'/eml/ ~/tmp/'email to markdown'/output
+
+$ emailmd extract --recursive ~/tmp/'email to markdown'/eml/ ~/tmp/'email to markdown'/output
+
 ```
 
 ### Make

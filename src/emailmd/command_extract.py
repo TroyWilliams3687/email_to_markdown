@@ -260,6 +260,9 @@ def extract_eml_body(msg: EmailMessage) -> str:
     # body = msg.get_body(('html', 'plain'))
     body = msg.get_body(("plain", "html"))
 
+    if body is None:
+        return ''
+
     # console.print(f'Body Type: {body.get_content_type()}')
     # text/html
     # text/plain
@@ -290,6 +293,10 @@ def extract_eml_attachments(msg: EmailMessage) -> Optional[list[EmailAttachment]
     attachments = []
 
     for i, part in enumerate(msg.get_payload()):
+
+        if isinstance(part, str):
+            continue
+
         if part.get_content_maintype() == "multipart":
             continue
 
@@ -407,17 +414,58 @@ def construct_non_duplicate_file(filename: Path, retry_count: int = 25) -> Path:
 
     return candidate
 
+# def read_file(filename: Path) -> str:
+#     """
+#     """
 
-def write_standard_email(email_message: StandardEmail, output: Path) -> None:
+#     # cp1252
+#     # utf-8
+#     # utf-16
+
+#     contents = filename.read_bytes()
+
+
+#     errors = []
+#     for encoding in ['utf-8', 'cp1252', 'utf-16']:
+
+#         try:
+#             file_contents = contents.decode(encoding)
+
+#         except Exception as e:
+#             errors.append(str(e))
+
+#         else:
+#             break
+#     else:
+#         console.print(errors)
+#         raise ValueError(f'Attempting to Decode {filename} failed.')
+
+#     return file_contents
+
+
+def write_standard_email(email_message: StandardEmail, output: Path, relative_path: Path = None) -> None:
     """
     Given the StandardEmail, write it to the output folder, creating a
     new folder for the email and attachments.
+
+    # args
+
+    email_message - the email message to write to a file
+
+    output - the root path to write the data too
+
+    # kwargs
+
+    relative_path - the path to add to the output to write the email
+    too. For example if the email is in `eml/travel/email.eml` it will
+    write the corresponding files to the relative folder under `output/travel/...`
+
     """
 
     message_name = sanitize_filename(email_message.header.subject)
 
     # Construct the output folder - from the subject
-    message_folder = output / message_name.lower()
+    message_folder = output / relative_path / message_name.lower() if relative_path else output / message_name.lower()
     message_folder.mkdir(parents=True, exist_ok=True)
 
     # message_folder = construct_non_duplicate_folder(output, message_name.lower())
@@ -434,25 +482,27 @@ def write_standard_email(email_message: StandardEmail, output: Path) -> None:
 
     for attachment in email_message.attachments:
 
-        attachment_folder = message_folder / Path("attachments")
-        attachment_folder.mkdir(parents=True, exist_ok=True)
+        if attachment.data:
+            attachment_folder = message_folder / Path("attachments")
+            attachment_folder.mkdir(parents=True, exist_ok=True)
 
-        attachment_file = attachment_folder / attachment.filename
-        attachment_file.write_bytes(attachment.data)
+            attachment_file = attachment_folder / attachment.filename
 
-        console.print(
-            f"[yellow]Saved Attachment[/yellow]: [cyan]{attachment_file.name}[/cyan]"
-        )
+            attachment_file.write_bytes(attachment.data)
+
+            console.print(
+                f"[yellow]Saved Attachment[/yellow]: [cyan]{attachment_file.name}[/cyan]"
+            )
 
 
 @click.command()
 @click.pass_context
 @click.argument(
     "files",
-    nargs=-1,  # accept an unlimited number of arguments. This makes it an iterable
+    nargs=1,
     type=click.Path(
         exists=True,
-        dir_okay=False,
+        dir_okay=True,
         readable=True,
         path_type=Path,
     ),
@@ -466,6 +516,11 @@ def write_standard_email(email_message: StandardEmail, output: Path) -> None:
         readable=True,
         path_type=Path,
     ),
+)
+@click.option(
+    "--recursive", "-r",
+    is_flag=True,
+    help="Search for email messages recursively in the input folder.",
 )
 def extract(*args, **kwargs):
     """
@@ -482,27 +537,33 @@ def extract(*args, **kwargs):
 
     $ emailmd extract ~/tmp/"email to markdown"/eml/* ~/tmp/"email to markdown"/msg/* ~/tmp/"email to markdown"/output
 
+    $ emailmd extract -r ~/tmp/'email to markdown'/eml/ ~/tmp/'email to markdown'/output
+
+
     """
 
     ctx = args[0]
 
-    if len(kwargs["files"]) == 0:
-        console.print("[red]No Files to process![/red]")
-        ctx.abort()
-
-    # console.print(f"Output: {kwargs['output']}...")
     kwargs["output"].mkdir(parents=True, exist_ok=True)
 
-    for f in kwargs["files"]:
-        console.print(f"Extracting: {f.name}...")
+    search = kwargs["files"].rglob if kwargs['recursive'] else kwargs["files"].glob
+
+    for f in search("*.*"):
+        console.print(f"Extracting: {f}...")
 
         if f.suffix.lower() == ".msg":
             pass
 
         elif f.suffix.lower() == ".eml":
+
+            # msg = extract_eml(read_file(f))
             msg = extract_eml(f.read_text())
-            write_standard_email(msg, kwargs["output"])
-            # process_eml(f.read_text(), kwargs["output"])
+
+            write_standard_email(
+                msg,
+                kwargs["output"],
+                relative_path=f.relative_to(kwargs["files"]),
+            )
 
         else:
             console.print(f"[red]Unknown format -> {f.name}[/red]")
