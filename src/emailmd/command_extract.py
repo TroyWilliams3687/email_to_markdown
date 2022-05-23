@@ -44,6 +44,8 @@ from markdownify import (
 from lxml.html.clean import Cleaner
 from pathvalidate import sanitize_filename
 
+from msglite import Message
+
 # ------------
 # Custom Modules
 
@@ -219,6 +221,87 @@ def sanitize(dirty_html):
     return cleaner.clean_html(dirty_html)
 
 
+def extract_msg_attachments(msg: Message) -> Optional[list[EmailAttachment]]:
+    """
+    """
+
+    attachments = []
+
+    for i, part in enumerate(msg.attachments):
+
+        if isinstance(part.data, Message):
+            attachments.extend(extract_msg_attachments(part.data))
+            continue
+
+        fn = part.title
+        if not fn:
+            ext = mimetypes.guess_extension(part.type)
+
+            if ext:
+                fn = Path(f"attachment_{i}{ext}")
+
+            else:
+                console.print(
+                    f"[red]{part.type} - Could not guess based on mimetype! Attachment not written.[/red]"
+                )
+                continue
+
+        attachments.append(
+            EmailAttachment(
+                filename=fn,
+                data=part.data,
+            )
+        )
+
+    return attachments
+
+
+
+def extract_msg(filename: Path) -> StandardEmail:
+    """
+    Transform the string to a StandardEmail message.
+
+    # Args
+
+    msg
+        - The path to the EML file to process
+
+    # Return
+
+    StandardEmail
+
+    """
+
+    msg = Message(filename)
+    # console.print(msg.subject)
+    # console.print(msg.to)
+    # # The API currently does not differentiate Sender and From cleanly:
+    # console.print(msg.sender)
+    # console.print(msg.body)
+
+    header = EmailHeader(
+        date=msg.date,
+        subject=msg.subject,
+        email_to=msg.to,
+        email_from=msg.sender,
+        reply_to=msg.reply_to,
+        sender=msg.sender,
+        cc=msg.cc,
+        bcc=msg.bcc,
+        others=None,
+    )
+
+    body = msg.body
+
+    attachments = extract_msg_attachments(msg)
+
+    return StandardEmail(
+        header=header,
+        body=body,
+        attachments=attachments,
+    )
+
+
 def extract_eml_header(msg: EmailMessage) -> EmailHeader:
     """ """
 
@@ -238,7 +321,7 @@ def extract_eml_header(msg: EmailMessage) -> EmailHeader:
         "Bcc",
     ]
 
-    [f"{hk}: {msg[hk].strip()}" for hk in header_keys if hk in msg]
+    # [f"{hk}: {msg[hk].strip()}" for hk in header_keys if hk in msg]
 
     return EmailHeader(
         date=msg["Date"],
@@ -296,6 +379,9 @@ def extract_eml_attachments(msg: EmailMessage) -> Optional[list[EmailAttachment]
 
         if isinstance(part, str):
             continue
+
+        # need to put a check in for EML as attachments and handle those appropriately?
+        # if they are already encoded as binary, it should be fine.
 
         if part.get_content_maintype() == "multipart":
             continue
@@ -552,21 +638,22 @@ def extract(*args, **kwargs):
         console.print(f"Extracting: {f}...")
 
         if f.suffix.lower() == ".msg":
-            pass
+            msg = extract_msg(f)
 
         elif f.suffix.lower() == ".eml":
 
-            # msg = extract_eml(read_file(f))
             msg = extract_eml(f.read_text())
-
-            write_standard_email(
-                msg,
-                kwargs["output"],
-                relative_path=f.parent.relative_to(kwargs["files"]),
-            )
 
         else:
             console.print(f"[red]Unknown format -> {f.name}[/red]")
+            continue
+
+        write_standard_email(
+            msg,
+            kwargs["output"],
+            relative_path=f.parent.relative_to(kwargs["files"]),
+        )
+
 
         console.print("")
 

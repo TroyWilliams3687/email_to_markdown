@@ -11,6 +11,7 @@ extract-msg  # https://github.com/mattgwwalker/msg-extractor
 lxml
 markdownify  # https://github.com/matthewwithanm/python-markdownify
 pathvalidate # https://github.com/thombashi/pathvalidate
+msglite      # https://github.com/alephdata/msglite
 
 # --------------
 # Additional Interesting Modules
