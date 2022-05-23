@@ -112,6 +112,10 @@ class EmailHeader:
     subject: str = None
     email_to: str = None
     email_from: str = None
+    reply_to: str = None
+    sender: str = None
+    cc: str = None
+    bcc: str = None
     others: dict[str, str] = None
 
 
@@ -158,6 +162,10 @@ class StandardEmail:
                 f"Subject: {self.header.subject}",
                 f"To: {self.header.email_to}",
                 f"From: {self.header.email_from}",
+                f"Reply-To: {self.header.reply_to}",
+                f"Sender: {self.header.sender}",
+                f"CC: {self.header.cc}",
+                f"BCC: {self.header.bcc}",
             ]
         )
 
@@ -224,6 +232,10 @@ def extract_eml_header(msg: EmailMessage) -> EmailHeader:
         "Subject",
         "To",
         "From",
+        "Reply-To",
+        "Sender",
+        "Cc",
+        "Bcc",
     ]
 
     [f"{hk}: {msg[hk].strip()}" for hk in header_keys if hk in msg]
@@ -233,6 +245,10 @@ def extract_eml_header(msg: EmailMessage) -> EmailHeader:
         subject=msg["Subject"],
         email_to=msg["To"],
         email_from=msg["From"],
+        reply_to=msg['Reply-To'],
+        sender=msg['Sender'],
+        cc=msg['Cc'],
+        bcc=msg['Bcc'],
         others={k: v for k, v in msg.items() if k not in header_keys},
     )
 
