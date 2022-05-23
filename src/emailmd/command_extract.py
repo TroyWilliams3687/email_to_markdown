@@ -329,7 +329,9 @@ def extract_eml(msg: str) -> StandardEmail:
     )
 
 
-def construct_non_duplicate_folder(root: Path, target: str, retry_count:int = 25) -> Path:
+def construct_non_duplicate_folder(
+    root: Path, target: str, retry_count: int = 25
+) -> Path:
 
     folder = root / Path(target)
 
@@ -375,13 +377,17 @@ def construct_non_duplicate_file(filename: Path, retry_count: int = 25) -> Path:
             console.print((f"[red]{candidate.name} exists![/red]"))
 
             # construct a new file name
-            candidate = filename.parent / Path(f"{filename.stem} ({i}){filename.suffix}")
+            candidate = filename.parent / Path(
+                f"{filename.stem} ({i}){filename.suffix}"
+            )
 
         else:
             break
 
     else:
-        raise FileExistsError(f"[red]Exceeded Retry Count[/red] - The file {candidate} exists and new names exceeded the retry count! ")
+        raise FileExistsError(
+            f"[red]Exceeded Retry Count[/red] - The file {candidate} exists and new names exceeded the retry count! "
+        )
 
     return candidate
 
@@ -403,7 +409,9 @@ def write_standard_email(email_message: StandardEmail, output: Path) -> None:
     # construct the name of the email message
     # message_file = message_folder / Path(f"{message_name.lower()}.md")
 
-    message_file = construct_non_duplicate_file(message_folder / Path(f"{message_name.lower()}.md"))
+    message_file = construct_non_duplicate_file(
+        message_folder / Path(f"{message_name.lower()}.md")
+    )
     message_file.write_text(email_message.to_markdown(attachment_folder="attachments"))
 
     console.print(f"Saved Email: [cyan]{message_file.name}[/cyan]")
