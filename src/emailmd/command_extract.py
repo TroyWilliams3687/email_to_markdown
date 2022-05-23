@@ -329,11 +329,11 @@ def extract_eml(msg: str) -> StandardEmail:
     )
 
 
-def construct_non_duplicate_folder(root: Path, target: str) -> Path:
+def construct_non_duplicate_folder(root: Path, target: str, retry_count:int = 25) -> Path:
 
     folder = root / Path(target)
 
-    for i in range(25):
+    for i in range(retry_count):
 
         try:
 
@@ -356,6 +356,36 @@ def construct_non_duplicate_folder(root: Path, target: str) -> Path:
     return folder
 
 
+def construct_non_duplicate_file(filename: Path, retry_count: int = 25) -> Path:
+    """
+    Given a file name, check if it exists and create a new incremental
+    name if it does, checking each one in turn. If there are no issues,
+    the new path is returned
+    """
+
+    candidate = filename.parent / filename.name
+
+    for i in range(retry_count):
+
+        try:
+            # https://docs.python.org/3/library/pathlib.html#pathlib.Path.touch
+            candidate.touch(exist_ok=False)
+
+        except FileExistsError as fe:
+            console.print((f"[red]{candidate.name} exists![/red]"))
+
+            # construct a new file name
+            candidate = filename.parent / Path(f"{filename.stem} ({i}){filename.suffix}")
+
+        else:
+            break
+
+    else:
+        raise FileExistsError(f"[red]Exceeded Retry Count[/red] - The file {candidate} exists and new names exceeded the retry count! ")
+
+    return candidate
+
+
 def write_standard_email(email_message: StandardEmail, output: Path) -> None:
     """
     Given the StandardEmail, write it to the output folder, creating a
@@ -365,11 +395,15 @@ def write_standard_email(email_message: StandardEmail, output: Path) -> None:
     message_name = sanitize_filename(email_message.header.subject)
 
     # Construct the output folder - from the subject
+    message_folder = output / message_name.lower()
+    message_folder.mkdir(parents=True, exist_ok=True)
 
-    message_folder = construct_non_duplicate_folder(output, message_name.lower())
+    # message_folder = construct_non_duplicate_folder(output, message_name.lower())
 
     # construct the name of the email message
-    message_file = message_folder / Path(f"{message_name.lower()}.md")
+    # message_file = message_folder / Path(f"{message_name.lower()}.md")
+
+    message_file = construct_non_duplicate_file(message_folder / Path(f"{message_name.lower()}.md"))
     message_file.write_text(email_message.to_markdown(attachment_folder="attachments"))
 
     console.print(f"Saved Email: [cyan]{message_file.name}[/cyan]")
