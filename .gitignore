@@ -142,8 +142,3 @@ $RECYCLE.BIN/
 # ------------
 # Custom
 
-.sconsign.dblite
-.sconstruct.ini
-pdf/
-notebooks/*.pdf
-output/

@@ -1,8 +1,42 @@
+[project]
+name = "email_to_markdown"
+version = "0.0.1"
+license = "MIT"
+description = "{cookiecutter.description}}"
+authors = [
+    { name = "Troy Williams", email = "troy.williams@bluebill.net" }
+]
+readme = "README.md"
+requires-python = ">= 3.12"
+dependencies = [
+    "appdirs",
+    "click",
+    "rich",
+    "extract-msg",
+    "lxml[html_clean]",
+    "markdownify",
+    "pathvalidate",
+    "msglite",
 
-# https://setuptools.readthedocs.io/en/latest/userguide/quickstart.html
+]
+
+
 [build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-# To Build, use https://pypa-build.readthedocs.io/en/latest/index.html
-# $ python -m build
+[tool.rye]
+managed = true
+dev-dependencies = [
+    "pytest",
+    "black",
+]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/email_to_markdown"]
+
+[project.scripts]
+emailmd="email_to_markdown.emailmd:main"
